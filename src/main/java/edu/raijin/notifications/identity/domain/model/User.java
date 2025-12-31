@@ -2,6 +2,7 @@ package edu.raijin.notifications.identity.domain.model;
 
 import static lombok.AccessLevel.NONE;
 import static lombok.AccessLevel.PRIVATE;
+import static org.apache.commons.lang3.ObjectUtils.firstNonNull;
 
 import java.util.UUID;
 
@@ -26,9 +27,17 @@ public class User {
 
     private String lastName;
 
+    private String fullName;
+
     private String email;
 
     private String role;
 
     private String code;
+
+    public void updateFrom(User updated) {
+        this.firstName = firstNonNull(updated.firstName, firstName);
+        this.lastName = firstNonNull(updated.lastName, lastName);
+        this.role = firstNonNull(updated.role, role);
+    }
 }

@@ -1,12 +1,18 @@
 package edu.raijin.notifications.identity.infrastructure.adapter.in.messaging.topic;
 
+import static org.springframework.kafka.support.KafkaHeaders.RECEIVED_KEY;
+
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import edu.raijin.commons.infrastructure.adapter.messaging.event.identity.UserEvent;
 import edu.raijin.commons.util.annotation.Adapter;
 import edu.raijin.notifications.identity.domain.model.User;
+import edu.raijin.notifications.identity.domain.usecase.CreateUserUseCase;
 import edu.raijin.notifications.identity.domain.usecase.SendConfirmationUseCase;
+import edu.raijin.notifications.identity.domain.usecase.UpdateUserUseCase;
 import edu.raijin.notifications.identity.infrastructure.adapter.in.messaging.mapper.UserEventMapper;
 import lombok.RequiredArgsConstructor;
 
@@ -15,12 +21,27 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserKafkaConsumerAdapter {
 
-    private final UserEventMapper mapper;
+    private final CreateUserUseCase create;
+    private final UpdateUserUseCase update;
     private final SendConfirmationUseCase confirmUser;
+    private final UserEventMapper mapper;
 
-    @KafkaListener(topics = "${kafka.topics.user-commands.topic}", id = "create", properties = "${kafka.topics.user-commands.default-value}")
-    public void consumeRegisteredUser(UserEvent event) {
-        User user = mapper.toDomain(event);
+    private void consumeCreatedUser(User user) {
+        create.create(user);
         confirmUser.sendConfirmation(user);
+    }
+
+    private void consumeUpdatedUser(User user) {
+        update.update(user.getId(), user);
+    }
+
+    @KafkaListener(topics = "${kafka.topics.user-commands.topic}", properties = "${kafka.topics.user-commands.properties}", groupId = "notifications-service")
+    public void consumeRegisteredUser(@Payload UserEvent event, @Header(RECEIVED_KEY) String key) {
+        User user = mapper.toDomain(event);
+        switch (key) {
+            case "create" -> consumeCreatedUser(user);
+            case "update" -> consumeUpdatedUser(user);
+            case "delete" -> consumeUpdatedUser(user);
+        }
     }
 }

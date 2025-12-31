@@ -1,4 +1,4 @@
-package edu.raijin.notifications.identity.infrastructure.adapter.out.utility;
+package edu.raijin.notifications.shared.infrastructure.adapter.out.utility;
 
 import static org.apache.commons.lang3.ObjectUtils.isEmpty;
 
@@ -16,6 +16,8 @@ import org.thymeleaf.context.Context;
 import edu.raijin.commons.util.annotation.Adapter;
 import edu.raijin.notifications.identity.domain.model.User;
 import edu.raijin.notifications.identity.domain.port.utility.SendConfirmationPort;
+import edu.raijin.notifications.scrum.domain.model.Story;
+import edu.raijin.notifications.scrum.domain.port.utility.SendStoryUpdatePort;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 @Adapter
 @Component
 @RequiredArgsConstructor
-public class SendMailAdapter implements SendConfirmationPort {
+public class SendMailAdapter implements SendConfirmationPort, SendStoryUpdatePort {
 
     private final ITemplateEngine templateEngine;
     private final JavaMailSender mailSender;
@@ -64,6 +66,16 @@ public class SendMailAdapter implements SendConfirmationPort {
         String body = render("email/confirmation", Map.of("user", user, "code", user.getCode().toCharArray()));
         try {
             sendHtmlEmail("Raijin", user.getEmail(), "Código de Confirmación", body);
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void sendStoryUpdate(Story story, User user, User actor) {
+        String body = render("email/story-update", Map.of("user", user, "story", story));
+        try {
+            sendHtmlEmail("Raijin", user.getEmail(), "Notificaciones: Actualización de Historia", body);
         } catch (MessagingException e) {
             throw new RuntimeException(e);
         }
